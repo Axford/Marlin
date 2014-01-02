@@ -37,10 +37,17 @@
 //===========================================================================
 //=============================public variables============================
 //===========================================================================
+#if EXTRUDERS > 0
 int target_temperature[EXTRUDERS] = { 0 };
 int target_temperature_bed = 0;
 int current_temperature_raw[EXTRUDERS] = { 0 };
 float current_temperature[EXTRUDERS] = { 0.0 };
+#else
+int target_temperature[EXTRUDERS];
+int target_temperature_bed = 0;
+int current_temperature_raw[EXTRUDERS];
+float current_temperature[EXTRUDERS];
+#endif
 int current_temperature_bed_raw = 0;
 float current_temperature_bed = 0.0;
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
@@ -123,8 +130,10 @@ static volatile bool temp_meas_ready = false;
   # define ARRAY_BY_EXTRUDERS(v1, v2, v3) { v1, v2, v3 }
 #elif EXTRUDERS > 1
   # define ARRAY_BY_EXTRUDERS(v1, v2, v3) { v1, v2 }
-#else
+#elif EXTRUDERS > 0
   # define ARRAY_BY_EXTRUDERS(v1, v2, v3) { v1 }
+#else
+  # define ARRAY_BY_EXTRUDERS(v1, v2, v3) {}
 #endif
 
 // Init min and max temp with extreme values to prevent false errors during startup
@@ -948,13 +957,13 @@ void max_temp_error(uint8_t e) {
 
 void min_temp_error(uint8_t e) {
   disable_heater();
+  #ifndef BOGUS_TEMPERATURE_FAILSAFE_OVERRIDE
   if(IsStopped() == false) {
     SERIAL_ERROR_START;
     SERIAL_ERRORLN((int)e);
     SERIAL_ERRORLNPGM(": Extruder switched off. MINTEMP triggered !");
     LCD_ALERTMESSAGEPGM("Err: MINTEMP");
   }
-  #ifndef BOGUS_TEMPERATURE_FAILSAFE_OVERRIDE
   Stop();
   #endif
 }
