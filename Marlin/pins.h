@@ -387,7 +387,7 @@
 
 
 // uncomment one of the following lines for RAMPS v1.3 or v1.0, comment both for v1.2 or 1.1
-// #define RAMPS_V_1_3
+#define RAMPS_V_1_3
 // #define RAMPS_V_1_0
 
 
@@ -468,9 +468,9 @@
     #define E0_DIR_PIN         28
     #define E0_ENABLE_PIN      24
 
-    #define E1_STEP_PIN        36
-    #define E1_DIR_PIN         34
-    #define E1_ENABLE_PIN      30
+   // #define E1_STEP_PIN        36
+    //#define E1_DIR_PIN         34
+    //#define E1_ENABLE_PIN      30
 
     #define SDPOWER            -1
     #define SDSS               53
@@ -488,7 +488,7 @@
   #endif
   
   #if MOTHERBOARD == 35
-    #define CONTROLLERFAN_PIN  10 //Pin used for the fan to cool controller
+    //#define CONTROLLERFAN_PIN  10 //Pin used for the fan to cool controller
   #endif
 
   #define PS_ON_PIN          12

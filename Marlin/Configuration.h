@@ -237,6 +237,31 @@
 #define EXTRUDE_MINTEMP 170
 #define EXTRUDE_MAXLENGTH (X_MAX_LENGTH+Y_MAX_LENGTH) //prevent extrusion of very large distances.
 
+
+
+//===========================================================================
+//=============================Laser Settings===========================
+//===========================================================================
+
+#define WATERCOOLING
+
+#define WATERCOOLING_AIR_TEMP_PIN 13   // Temp 0 on RAMPS 1.4
+#define WATERCOOLING_AIR_TEMP_SENSOR 1
+
+#define WATERCOOLING_INLET_TEMP_PIN 14  // Temp 1 on RAMPS 1.4
+#define WATERCOOLING_INLET_TEMP_SENSOR 1
+
+#define WATERCOOLING_OUTLET_TEMP_PIN 15   // Temp 2 on RAMPS 1.4
+#define WATERCOOLING_OUTLET_TEMP_SENSOR 1
+
+#define WATERCOOLING_PUMP_PIN 9   // D9 on RAMPS 1.4
+
+#define WATERCOOLING_RADFANS_PIN 10  // D10 on RAMPS 1.4
+
+#define WATERCOOLING_FLOW_SENSOR_PIN 3  // X-Min on RAMPS 1.4
+
+
+
 //===========================================================================
 //=============================Mechanical Settings===========================
 //===========================================================================
@@ -291,7 +316,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #define DISABLE_X false
 #define DISABLE_Y false
 #define DISABLE_Z false
-#define DISABLE_E false // For all extruders
+#define DISABLE_E true // For all extruders
 
 #define INVERT_X_DIR false    // for Mendel set to false, for Orca set to true
 #define INVERT_Y_DIR false    // for Mendel set to true, for Orca set to false
@@ -310,9 +335,9 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 #define max_software_endstops true  // If true, axis won't move to coordinates greater than the defined lengths below.
 
 // Travel limits after homing
-#define X_MAX_POS 850
+#define X_MAX_POS 890
 #define X_MIN_POS 0
-#define Y_MAX_POS 205
+#define Y_MAX_POS 650
 #define Y_MIN_POS 0
 #define Z_MAX_POS 200
 #define Z_MIN_POS 0
@@ -399,7 +424,7 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
 
 // default settings
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {78.7402,78.7402,200.0*8/3,760*1.1}  // default steps per unit for Ultimaker
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {71.11,71.11,200.0*8/3,760*1.1}  // default steps per unit for Ultimaker
 #define DEFAULT_MAX_FEEDRATE          {500, 500, 5, 25}    // (mm/sec)
 #define DEFAULT_MAX_ACCELERATION      {9000,9000,100,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 

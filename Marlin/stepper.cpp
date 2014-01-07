@@ -385,7 +385,7 @@ ISR(TIMER1_COMPA_vect)
       WRITE(Y_DIR_PIN, INVERT_Y_DIR);
 	  
 	  #ifdef Y_DUAL_STEPPER_DRIVERS
-	    WRITE(Y2_DIR_PIN, !(INVERT_Y_DIR == INVERT_Y2_VS_Y_DIR));
+		WRITE(Y2_DIR_PIN, !(INVERT_Y_DIR == INVERT_Y2_VS_Y_DIR));
 	  #endif
 	  
       count_direction[Y_AXIS]=-1;
@@ -394,7 +394,7 @@ ISR(TIMER1_COMPA_vect)
       WRITE(Y_DIR_PIN, !INVERT_Y_DIR);
 	  
 	  #ifdef Y_DUAL_STEPPER_DRIVERS
-	    WRITE(Y2_DIR_PIN, (INVERT_Y_DIR == INVERT_Y2_VS_Y_DIR));
+		WRITE(Y2_DIR_PIN, (INVERT_Y_DIR == INVERT_Y2_VS_Y_DIR));
 	  #endif
 	  
       count_direction[Y_AXIS]=1;
@@ -594,7 +594,10 @@ ISR(TIMER1_COMPA_vect)
           WRITE(Y_STEP_PIN, !INVERT_Y_STEP_PIN);
 		  
 		  #ifdef Y_DUAL_STEPPER_DRIVERS
-			WRITE(Y2_STEP_PIN, !INVERT_Y_STEP_PIN);
+			// only move Y2 when y2_axis_enabled
+			// allows for hall_sensor based axis alignment
+			if (y2_axis_enabled)	
+				WRITE(Y2_STEP_PIN, !INVERT_Y_STEP_PIN);
 		  #endif
 		  
           counter_y -= current_block->step_event_count;
@@ -602,7 +605,10 @@ ISR(TIMER1_COMPA_vect)
           WRITE(Y_STEP_PIN, INVERT_Y_STEP_PIN);
 		  
 		  #ifdef Y_DUAL_STEPPER_DRIVERS
-			WRITE(Y2_STEP_PIN, INVERT_Y_STEP_PIN);
+			// only move Y2 when y2_axis_enabled
+			// allows for hall_sensor based axis alignment
+			if (y2_axis_enabled)
+				WRITE(Y2_STEP_PIN, INVERT_Y_STEP_PIN);
 		  #endif
         }
 
@@ -880,6 +886,12 @@ void st_init()
     #ifdef ENDSTOPPULLUP_ZMAX
       WRITE(Z_MAX_PIN,HIGH);
     #endif
+  #endif
+  
+  #if defined(Y_DUAL_HALL_SENSOR_PIN) && Y_DUAL_HALL_SENSOR_PIN > -1
+	SET_INPUT(Y_DUAL_HALL_SENSOR_PIN);
+	// ensure pullups are off!
+	WRITE(Y_DUAL_HALL_SENSOR_PIN, LOW);
   #endif
 
 

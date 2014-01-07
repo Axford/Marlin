@@ -161,7 +161,8 @@
 // M503 - print the current settings (from memory not from eeprom)
 // M540 - Use S[0|1] to enable or disable the stop SD card print on endstop hit (requires ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED)
 // M600 - Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
-// M666 - set delta endstop adjustemnt
+// M666 - Set delta endstop adjustment
+// M667 - Read delta endstop adjustment
 // M605 - Set dual x-carriage movement mode: S<mode> [ X<duplication x-offset> R<duplication temp offset> ]
 // M907 - Set digital trimpot motor current using axis codes.
 // M908 - Control digital trimpot directly.
@@ -192,6 +193,10 @@ float current_position[NUM_AXIS] = { 0.0, 0.0, 0.0, 0.0 };
 float add_homeing[3]={0,0,0};
 #ifdef DELTA
 float endstop_adj[3]={0,0,0};
+#endif
+#ifdef Y_DUAL_HALL_SENSOR_PIN
+float endstop_adj[3]={0,512,0}; 
+bool y2_axis_enabled = true;
 #endif
 float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
@@ -352,6 +357,21 @@ void enquecommand_P(const char *cmd)
   }
 }
 
+#ifdef Y_DUAL_HALL_SENSOR_PIN
+// returns an oversampled reading from the hall sensor
+int readYDualHallSensor() {
+	delay(50);  // let motor noise settle
+	
+	float r = 0;
+	for (int i=0; i<64; i++) {
+		r += analogRead(Y_DUAL_HALL_SENSOR_PINA);
+		delay(5);
+	}
+	
+	return (int) r/64;
+}
+#endif
+
 void setup_killpin()
 {
   #if defined(KILL_PIN) && KILL_PIN > -1
@@ -481,6 +501,10 @@ void setup()
 
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     SET_OUTPUT(CONTROLLERFAN_PIN); //Set pin used for driver cooling fan
+  #endif
+  
+  #ifdef WATERCOOLING
+	watercooling_init();
   #endif
 }
 
@@ -1024,6 +1048,51 @@ static void homeaxis(int axis) {
       plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
       st_synchronize();
     }
+#endif
+
+#ifdef Y_DUAL_HALL_SENSOR_PIN
+	if (axis==Y_AXIS) {
+		// disable Y2 and move Y until hall reading matches endstop_adj value
+		y2_axis_enabled = false;
+		// also disable endstops, otherwise corrective movements will be blocked
+		enable_endstops(false);
+		
+		// read hall sensor
+		int y2Pos = readYDualHallSensor();
+		int error = endstop_adj[Y_AXIS] - y2Pos;
+		int iterations = 100;
+		int errorDir = error>0?1:-1;
+		
+		destination[Y_AXIS] = 0;
+		
+		while(abs(error) > 2 && iterations > 0) {
+			// if error is positive, move Y axis towards endstop  5(?) steps
+			//axis_steps_per_unit[Y_AXIS]
+			
+			SERIAL_PROTOCOL("Y2 endstop error:");
+			SERIAL_PROTOCOL(error);
+			SERIAL_PROTOCOLLN("");
+		
+			plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+			
+			destination[axis] = 8.0/axis_steps_per_unit[Y_AXIS] * axis_home_dir * errorDir;
+			
+			plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
+			st_synchronize();
+
+			y2Pos = readYDualHallSensor();
+			error = endstop_adj[Y_AXIS] - y2Pos;
+			errorDir = error>0?1:-1;
+			iterations -= 1;
+		}
+		
+		SERIAL_PROTOCOL("Y2 aligned, error:");
+		SERIAL_PROTOCOL(error);
+		SERIAL_PROTOCOLLN("");
+
+		enable_endstops(true);
+		y2_axis_enabled = true;
+	}
 #endif
     axis_is_at_home(axis);
     destination[axis] = current_position[axis];
@@ -2171,6 +2240,10 @@ void process_commands()
         SERIAL_PROTOCOLPGM(MSG_Z_MAX);
         SERIAL_PROTOCOLLN(((READ(Z_MAX_PIN)^Z_MAX_ENDSTOP_INVERTING)?MSG_ENDSTOP_HIT:MSG_ENDSTOP_OPEN));
       #endif
+	  #if defined(Y_DUAL_HALL_SENSOR_PIN) && Y_DUAL_HALL_SENSOR > -1
+		SERIAL_PROTOCOLPGM(MSG_Y_DUAL_HALL);
+		SERIAL_PROTOCOLLN(analogRead(Y_DUAL_HALL_SENSOR_PINA));
+	  #endif
       break;
       //TODO: update for all axis, use for loop
     #ifdef BLINKM
@@ -2233,13 +2306,24 @@ void process_commands()
         if(code_seen(axis_codes[i])) add_homeing[i] = code_value();
       }
       break;
-    #ifdef DELTA
-    case 666: // M666 set delta endstop adjustemnt
-      for(int8_t i=0; i < 3; i++)
+	#if defined(DELTA) || defined(Y_DUAL_HALL_SENSOR_PIN)
+    case 666: // M666 set delta endstop adjustment, also used for machines with Y_DUAL_STEPPERS combined with hall sensor on Y2- only Y component is used
+	for(int8_t i=0; i < 3; i++)
       {
         if(code_seen(axis_codes[i])) endstop_adj[i] = code_value();
       }
       break;
+	case 667: //M667 retrieve delta endstop adjustment values
+	  SERIAL_PROTOCOLPGM("X:");
+      SERIAL_PROTOCOL(endstop_adj[X_AXIS]);
+      SERIAL_PROTOCOLPGM("Y:");
+      SERIAL_PROTOCOL(endstop_adj[Y_AXIS]);
+      SERIAL_PROTOCOLPGM("Z:");
+      SERIAL_PROTOCOL(endstop_adj[Z_AXIS]);
+      SERIAL_PROTOCOLPGM("E:");
+      SERIAL_PROTOCOL(endstop_adj[E_AXIS]);
+      SERIAL_PROTOCOLLN("");
+	  break;
     #endif
     #ifdef FWRETRACT
     case 207: //M207 - set retract length S[positive mm] F[feedrate mm/sec] Z[additional zlift/hop]
@@ -3221,6 +3305,16 @@ void controllerFan()
 }
 #endif
 
+#ifdef WATERCOOLING
+void watercooling() {
+	
+	
+	
+}
+
+#endif
+
+
 #ifdef TEMP_STAT_LEDS
 static bool blue_led = false;
 static bool red_led = false;
@@ -3278,6 +3372,9 @@ void manage_inactivity()
   #endif
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     controllerFan(); //Check if fan should be turned on to cool stepper drivers down
+  #endif
+  #ifdef WATERCOOLING
+	watercooling();  // check on watercooling
   #endif
   #ifdef EXTRUDER_RUNOUT_PREVENT
     if( (millis() - previous_millis_cmd) >  EXTRUDER_RUNOUT_SECONDS*1000 )

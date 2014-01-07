@@ -151,10 +151,17 @@
 #endif
 
 // Same again but for Y Axis.
-//#define Y_DUAL_STEPPER_DRIVERS
+#define Y_DUAL_STEPPER_DRIVERS
 
 // Define if the two Y drives need to rotate in opposite directions
 #define INVERT_Y2_VS_Y_DIR true
+
+// define if using linear hall sensor for dual Y - normal limit switch should be physically wired on Y2 axis, hall sensor on Y
+// normal connection is onto RAMPS AUX 1, outer pins
+// tested with Allegro A1302KUA-T sensor
+#define Y_DUAL_HALL_SENSOR_PIN 57
+#define Y_DUAL_HALL_SENSOR_PINA 3
+
 
 #ifdef Y_DUAL_STEPPER_DRIVERS
   #undef EXTRUDERS

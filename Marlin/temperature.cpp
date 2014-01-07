@@ -78,6 +78,10 @@ unsigned char soft_pwm_bed;
 #ifdef BABYSTEPPING
   volatile int babystepsTodo[3]={0,0,0};
 #endif
+
+#ifdef WATERCOOLING
+  unsigned int watercoolingFanSpeed;
+#endif
   
 //===========================================================================
 //=============================private variables============================
@@ -888,6 +892,17 @@ void tp_init()
   }
 #endif //BED_MAXTEMP
 }
+
+#ifdef WATERCOOLING
+void watercooling_init() {
+	watercoolingFanSpeed = 255;
+	
+	SET_OUTPUT(WATERCOOLING_RADFANS_PIN);
+	
+	// ensure fan is turned on
+	analogWrite(WATERCOOLING_RADFANS_PIN, watercoolingFanSpeed);
+}
+#endif
 
 void setWatch() 
 {  
