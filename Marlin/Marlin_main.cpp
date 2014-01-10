@@ -3248,12 +3248,12 @@ void prepare_move()
   }
 }
 
-float[4][2] get_bezier_coordinates()
+void get_bezier_coordinates(float p[4][2])
 {
-    float p[4][2] = {{current_position[0],current_position[1]},
-                    {current_position[0],current_position[1]},
-                    {current_position[0],current_position[1]},
-                    {current_position[0],current_position[1]}};
+	for (int8_t i=0; i<4; i++) {
+		p[i][0] = current_position[0];
+		p[i][1] = current_position[1];
+   }
    
     get_coordinates();
 
@@ -3278,12 +3278,11 @@ float[4][2] get_bezier_coordinates()
 		next_feedrate = code_value();
 		if(next_feedrate > 0.0) feedrate = next_feedrate;
 	}
-	
-	return p;
 }
 
 void prepare_bezier_move() {
-  float p[4][2] = get_bezier_coordinates();
+  float p[4][2];
+  get_bezier_coordinates(p);
 
   mc_bezier(p, feedrate*feedmultiply/60/100.0, active_extruder);
 

@@ -187,6 +187,7 @@ bool IsStopped();
 void enquecommand(const char *cmd); //put an ascii command at the end of the current buffer.
 void enquecommand_P(const char *cmd); //put an ascii command at the end of the current buffer, read from flash
 void prepare_arc_move(char isclockwise);
+void prepare_bezier_move();
 void clamp_to_software_endstops(float target[3]);
 
 #ifdef FAST_PWM_FAN

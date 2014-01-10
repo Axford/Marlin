@@ -140,7 +140,7 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
 
 
 
-void mc_bezier(float *p, float feed_rate, uint8_t extruder) {
+void mc_bezier(float p[4][2], float feed_rate, uint8_t extruder) {
   
   int steps = 10;
   float stepsPerUnit = 1;
@@ -155,7 +155,7 @@ void mc_bezier(float *p, float feed_rate, uint8_t extruder) {
   float t = (1.0);
   float temp;
 
-  // calc num steps
+  // calc num steps from estimate of curve length
   float maxD = 0, sqrD = 0;
   for (int i=1; i<4; i++) {
   	sqrD = (p[i][0] - p[i-1][0])*(p[i][0] - p[i-1][0])  +  (p[i][1] - p[i-1][1])*(p[i][1] - p[i-1][1]);
@@ -196,11 +196,6 @@ void mc_bezier(float *p, float feed_rate, uint8_t extruder) {
 	  fdd[i] = fdd[i] + fddd[i];
 	  fdd_per_2[i] = fdd_per_2[i] + fddd_per_2[i];
     }
-  }
-  
-  // prep destination
-  for(int i=0; i < NUM_AXIS; i++) {
-    destination[i] = current_position[i];
   }
   
    plan_buffer_line(p[3][0], p[3][1], current_position[2], current_position[3], feed_rate, extruder);

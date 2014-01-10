@@ -32,6 +32,6 @@ void mc_arc(float *position, float *target, float *offset, unsigned char axis_0,
   unsigned char axis_linear, float feed_rate, float radius, unsigned char isclockwise, uint8_t extruder);
   
 
-void mc_bezier();  
+void mc_bezier(float p[4][2], float feed_rate, uint8_t extruder);
 
 #endif
