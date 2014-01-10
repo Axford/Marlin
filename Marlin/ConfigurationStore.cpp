@@ -37,12 +37,12 @@ void _EEPROM_readData(int &pos, uint8_t* value, uint8_t size)
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "V10"
+#define EEPROM_VERSION "10"
 
 #ifdef EEPROM_SETTINGS
 void Config_StoreSettings() 
 {
-  char ver[4]= "000";
+  char ver[4]= EEPROM_VERSION;
   int i=EEPROM_OFFSET;
   EEPROM_WRITE_VAR(i,ver); // invalidate data first 
   EEPROM_WRITE_VAR(i,axis_steps_per_unit);  
@@ -197,7 +197,7 @@ void Config_RetrieveSettings()
         EEPROM_READ_VAR(i,max_z_jerk);
         EEPROM_READ_VAR(i,max_e_jerk);
         EEPROM_READ_VAR(i,add_homeing);
-        #ifdef DELTA
+        #if defined(DELTA) || defined(Y_DUAL_HALL_SENSOR_PIN)
         EEPROM_READ_VAR(i,endstop_adj);
         #endif
         #ifndef ULTIPANEL
@@ -263,6 +263,7 @@ void Config_ResetDefault()
     add_homeing[0] = add_homeing[1] = add_homeing[2] = 0;
 #if defined(DELTA) || defined(Y_DUAL_HALL_SENSOR_PIN)
     endstop_adj[0] = endstop_adj[1] = endstop_adj[2] = 0;
+	endstop_adj[1] = 512;
 #endif
 #ifdef ULTIPANEL
     plaPreheatHotendTemp = PLA_PREHEAT_HOTEND_TEMP;

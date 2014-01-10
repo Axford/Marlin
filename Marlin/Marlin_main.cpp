@@ -363,12 +363,12 @@ int readYDualHallSensor() {
 	delay(50);  // let motor noise settle
 	
 	float r = 0;
-	for (int i=0; i<64; i++) {
+	for (int i=0; i<32; i++) {
 		r += analogRead(Y_DUAL_HALL_SENSOR_PINA);
-		delay(5);
+		delay(10);
 	}
 	
-	return (int) r/64;
+	return (int) r/32.0;
 }
 #endif
 
