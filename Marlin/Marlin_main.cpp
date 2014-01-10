@@ -189,7 +189,7 @@ bool axis_relative_modes[] = AXIS_RELATIVE_MODES;
 int feedmultiply=100; //100->1 200->2
 int saved_feedmultiply;
 int extrudemultiply=100; //100->1 200->2
-float current_position[NUM_AXIS] = { 0.0, 0.0, 0.0, 0.0 };
+float current_position[NUM_AXIS] = {0.0, 0.0, 0.0, 0.0};
 float add_homeing[3]={0,0,0};
 #ifdef DELTA
 float endstop_adj[3]={0,0,0};
@@ -1161,6 +1161,11 @@ void process_commands()
         lcd_update();
       }
       break;
+    case 5: // G5  - BEZIER
+      if(Stopped == false) {
+        prepare_bezier_move();
+        return;
+      }
       #ifdef FWRETRACT
       case 10: // G10 retract
       if(!retracted)
@@ -3241,6 +3246,54 @@ void prepare_move()
   for(int8_t i=0; i < NUM_AXIS; i++) {
     current_position[i] = destination[i];
   }
+}
+
+float[4][2] get_bezier_coordinates()
+{
+    float p[4][2] = {{current_position[0],current_position[1]},
+                    {current_position[0],current_position[1]},
+                    {current_position[0],current_position[1]},
+                    {current_position[0],current_position[1]}};
+   
+    get_coordinates();
+
+    // start point
+	p[0][0] = current_position[0];
+	p[0][1] = current_position[1];
+
+	// control point 1
+	if(code_seen('I')) p[1][0] = (float)code_value() + (axis_relative_modes[0] || relative_mode)*current_position[0];
+	if(code_seen('J')) p[1][1] = (float)code_value() + (axis_relative_modes[1] || relative_mode)*current_position[1];
+
+	// control point 2
+	if(code_seen('K')) p[2][0] = (float)code_value() + (axis_relative_modes[0] || relative_mode)*current_position[0];
+	if(code_seen('L')) p[2][1] = (float)code_value() + (axis_relative_modes[1] || relative_mode)*current_position[1];
+
+	// end point
+	if(code_seen(axis_codes[0])) p[3][0] = (float)code_value() + (axis_relative_modes[0] || relative_mode)*current_position[0];
+	if(code_seen(axis_codes[1])) p[3][1] = (float)code_value() + (axis_relative_modes[1] || relative_mode)*current_position[1];
+
+	//feedrate
+	if(code_seen('F')) {
+		next_feedrate = code_value();
+		if(next_feedrate > 0.0) feedrate = next_feedrate;
+	}
+	
+	return p;
+}
+
+void prepare_bezier_move() {
+  float p[4][2] = get_bezier_coordinates();
+
+  mc_bezier(p, feedrate*feedmultiply/60/100.0, active_extruder);
+
+  // As far as the parser is concerned, the position is now == target. In reality the
+  // motion control system might still be processing the action and the real tool position
+  // in any intermediate location.
+  for(int8_t i=0; i < NUM_AXIS; i++) {
+    current_position[i] = destination[i];
+  }
+  previous_millis_cmd = millis();
 }
 
 void prepare_arc_move(char isclockwise) {

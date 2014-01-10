@@ -17,6 +17,8 @@
 
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  
+  Extended with Bezier implementation by Damian Axford, Copyright (c) 2014
 */
 
 #ifndef motion_control_h
@@ -29,4 +31,7 @@
 void mc_arc(float *position, float *target, float *offset, unsigned char axis_0, unsigned char axis_1,
   unsigned char axis_linear, float feed_rate, float radius, unsigned char isclockwise, uint8_t extruder);
   
+
+void mc_bezier();  
+
 #endif

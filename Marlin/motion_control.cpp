@@ -135,3 +135,73 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
   //   plan_set_acceleration_manager_enabled(acceleration_manager_was_enabled);
 }
 
+
+
+
+
+
+void mc_bezier(float *p, float feed_rate, uint8_t extruder) {
+  
+  int steps = 10;
+  float stepsPerUnit = 1;
+  
+  float f[2]={0,0};
+  float fd[2]={0,0};
+  float fdd[2]={0,0};
+  float fddd[2]={0,0};
+  float fdd_per_2[2]={0,0};
+  float fddd_per_2[2]={0,0};
+  float fddd_per_6[2]={0,0};
+  float t = (1.0);
+  float temp;
+
+  // calc num steps
+  float maxD = 0, sqrD = 0;
+  for (int i=1; i<4; i++) {
+  	sqrD = (p[i][0] - p[i-1][0])*(p[i][0] - p[i-1][0])  +  (p[i][1] - p[i-1][1])*(p[i][1] - p[i-1][1]);
+  	if (sqrD > maxD) {maxD = sqrD; };
+  }
+  maxD = sqrt(maxD);
+  if (maxD > 0) {
+  	steps = round((3 * maxD  * stepsPerUnit));
+  }
+  if (steps < 1) steps = 1;
+  if (steps > 200) steps = 200;
+  
+  // init Forward Differencing algo
+  //---------------------------------------
+  t = 1.0 / steps;
+  temp = t*t;
+  for (int i=0; i<2; i++) {
+	f[i] = p[0][i];
+	fd[i] = 3 * (p[1][i] - p[0][i]) * t;
+	fdd_per_2[i] = 3 * (p[0][i] - 2 * p[1][i] + p[2][i]) * temp;
+	fddd_per_2[i] = 3 * (3 * (p[1][i] - p[2][i]) + p[3][i] - p[0][i]) * temp * t;
+
+	fddd[i] = fddd_per_2[i] + fddd_per_2[i];
+	fdd[i] = fdd_per_2[i] + fdd_per_2[i];
+	fddd_per_6[i] = (fddd_per_2[i] * (1.0 / 3));
+  }
+  
+  // iterate through curve
+  //---------------------------------------
+  for (int loop=0; loop < steps; loop++) {
+  
+    plan_buffer_line(f[0], f[1], current_position[2], current_position[3], feed_rate, extruder);
+
+    // update f
+    for (int i=0; i<2; i++) {
+	  f[i] = f[i] + fd[i] + fdd_per_2[i] + fddd_per_6[i];
+	  fd[i] = fd[i] + fdd[i] + fddd_per_2[i];
+	  fdd[i] = fdd[i] + fddd[i];
+	  fdd_per_2[i] = fdd_per_2[i] + fddd_per_2[i];
+    }
+  }
+  
+  // prep destination
+  for(int i=0; i < NUM_AXIS; i++) {
+    destination[i] = current_position[i];
+  }
+  
+   plan_buffer_line(p[3][0], p[3][1], current_position[2], current_position[3], feed_rate, extruder);
+}
