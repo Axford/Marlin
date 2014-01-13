@@ -85,6 +85,7 @@
 
 // This defines the number of extruders
 #define EXTRUDERS 1
+#define EXTRUDER_TEMP_SENSORS 3
 
 //// The following define selects which power supply you have. Please choose the one that matches your setup
 // 1 = ATX
@@ -125,8 +126,8 @@
 // 55 is 100k thermistor - ATC Semitec 104GT-2 (Used in ParCan & J-Head) (1k pullup)
 
 #define TEMP_SENSOR_0 1
-#define TEMP_SENSOR_1 0
-#define TEMP_SENSOR_2 0
+#define TEMP_SENSOR_1 1
+#define TEMP_SENSOR_2 1
 #define TEMP_SENSOR_BED 0
 
 // This makes temp sensor 1 a redundant sensor for sensor 0. If the temperatures difference between these sensors is to high the print will be aborted.
@@ -230,9 +231,9 @@
 
 //this prevents dangerous Extruder moves, i.e. if the temperature is under the limit
 //can be software-disabled for whatever purposes by
-#define PREVENT_DANGEROUS_EXTRUDE
+//#define PREVENT_DANGEROUS_EXTRUDE
 //if PREVENT_DANGEROUS_EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
-#define PREVENT_LENGTHY_EXTRUDE
+//#define PREVENT_LENGTHY_EXTRUDE
 
 #define EXTRUDE_MINTEMP 170
 #define EXTRUDE_MAXLENGTH (X_MAX_LENGTH+Y_MAX_LENGTH) //prevent extrusion of very large distances.
@@ -242,6 +243,10 @@
 //===========================================================================
 //=============================Laser Settings===========================
 //===========================================================================
+
+#define LASER
+
+
 
 #define WATERCOOLING
 
@@ -259,7 +264,7 @@
 #define WATERCOOLING_RADFANS_PIN 10  // D10 on RAMPS 1.4
 
 #define WATERCOOLING_FLOW_SENSOR_PIN 3  // X-Min on RAMPS 1.4
-
+#define WATERCOOLING_FLOW_SENSOR_INTERRUPT 1
 
 
 //===========================================================================

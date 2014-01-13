@@ -186,7 +186,6 @@ void mc_bezier(float p[4][2], float feed_rate, uint8_t extruder) {
   // iterate through curve
   //---------------------------------------
   for (int loop=0; loop < steps; loop++) {
-  
     plan_buffer_line(f[0], f[1], current_position[2], current_position[3], feed_rate, extruder);
 
     // update f
@@ -199,4 +198,5 @@ void mc_bezier(float p[4][2], float feed_rate, uint8_t extruder) {
   }
   
    plan_buffer_line(p[3][0], p[3][1], current_position[2], current_position[3], feed_rate, extruder);
-}
+   
+ }

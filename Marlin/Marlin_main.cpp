@@ -57,6 +57,10 @@
 #include "Servo.h"
 #endif
 
+#ifdef LASER
+#include "laser.h"
+#endif
+
 #if defined(DIGIPOTSS_PIN) && DIGIPOTSS_PIN > -1
 #include <SPI.h>
 #endif
@@ -505,6 +509,10 @@ void setup()
   
   #ifdef WATERCOOLING
 	watercooling_init();
+  #endif
+  
+  #ifdef LASER
+    laser_init();
   #endif
 }
 
@@ -1164,7 +1172,9 @@ void process_commands()
     case 5: // G5  - BEZIER
       if(Stopped == false) {
         prepare_bezier_move();
-        return;
+		break;
+		//ClearToSend();
+        //return;
       }
       #ifdef FWRETRACT
       case 10: // G10 retract
@@ -1676,6 +1686,28 @@ void process_commands()
       LCD_MESSAGEPGM(MSG_RESUMING);
     }
     break;
+#endif
+#ifdef LASER
+	case 3:    // M3, same as M4
+    case 4:    // M4 - turn laser on, power level as percentage as S parameter (range 0-100)	
+	  if (isLaserArmed()) {
+		if(code_seen('S')) setLaserPower(code_value());
+		st_synchronize();
+		turnLaserOn();
+	  } else {
+		SERIAL_ERROR_START;
+        SERIAL_ERRORLN("Can't fire laser, not armed");
+	  }
+	  break;
+	case 5:    // M5 - turn laser off
+	  if (isLaserArmed() && isLaserOn()) {
+		st_synchronize();
+		turnLaserOff();
+	  } else {
+		SERIAL_ERROR_START;
+        SERIAL_ERRORLN("Laser already off?!");
+	  }
+	  break;
 #endif
     case 17:
         LCD_MESSAGEPGM(MSG_NO_MOVE);
@@ -2330,6 +2362,56 @@ void process_commands()
       SERIAL_PROTOCOLLN("");
 	  break;
     #endif
+	#ifdef LASER
+	case 668:  // M668 - show laser settings
+	  SERIAL_ECHO("Power:");
+      SERIAL_ECHOLN(getLaserPower());
+	  SERIAL_ECHO("Armed:");
+	  SERIAL_ECHOLN(isLaserArmed());
+	  SERIAL_ECHO("Status:");
+	  SERIAL_ECHOLN(isLaserOn());
+	  break;
+	case 669:  // M669 - arm laser
+	  armLaser();
+	  SERIAL_ECHO_START;
+      SERIAL_ECHOLN("Laser armed!");
+	  break;
+	case 670:  // M670 - disarm laser
+	  disarmLaser();
+	  SERIAL_ECHO_START;
+      SERIAL_ECHOLN("Laser disarmed");
+	  break;
+	case 671:  // M671 - test fire, S parameter sets laser power as percentage (0-100), P parameter sets duration in milliseconds
+	  if (isLaserArmed()) {
+		  codenum = 0;
+		  if(code_seen('P')) codenum = code_value(); // milliseconds to wait
+		  if(code_seen('S')) setLaserPower(code_value());
+		
+		  SERIAL_ECHO_START;
+		  SERIAL_ECHO("Test Firing Laser at ");
+		  SERIAL_ECHO(getLaserPower());
+		  SERIAL_ECHO("% for ");
+		  SERIAL_ECHO(codenum);
+		  SERIAL_ECHOLN("ms");
+		
+		  if (codenum > 0) {
+			  st_synchronize();
+			  codenum += millis();  // keep track of when we started waiting
+			  previous_millis_cmd = millis();
+			  turnLaserOn();
+			  while(millis()  < codenum ){
+				manage_heater();
+				manage_inactivity();
+				lcd_update();
+			  }
+		  }
+		  turnLaserOff();
+	  } else {
+		SERIAL_ERROR_START;
+        SERIAL_ERRORLN("Can't fire laser, not armed");
+	  }
+      break;
+	#endif
     #ifdef FWRETRACT
     case 207: //M207 - set retract length S[positive mm] F[feedrate mm/sec] Z[additional zlift/hop]
     {
@@ -3358,10 +3440,22 @@ void controllerFan()
 #endif
 
 #ifdef WATERCOOLING
+unsigned long watercooling_lastCheck=0;
+
 void watercooling() {
+	unsigned long curTime = millis();
 	
+	// check every 200ms (approx)
+	if (curTime > watercooling_lastCheck + 200) {
+		watercooling_update();
 	
+		
+		
+		
+		//SERIAL_PROTOCOLLN(watercooling_getFlowRate());
 	
+		watercooling_lastCheck = curTime;
+	}
 }
 
 #endif

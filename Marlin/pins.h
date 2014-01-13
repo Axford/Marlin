@@ -478,7 +478,8 @@
   #endif
 
   #if MOTHERBOARD == 33 || MOTHERBOARD == 35 || MOTHERBOARD == 67
-    #define FAN_PIN            9 // (Sprinter config)
+    //#define FAN_PIN            9 // (Sprinter config)
+	#define FAN_PIN			8      // dummy setting, to avoid conflict with water cooling
   #else
     #define FAN_PIN            4 // IO pin. Buffer needed
   #endif
@@ -508,7 +509,7 @@
   #if MOTHERBOARD == 33 || MOTHERBOARD == 67
     #define HEATER_1_PIN       -1
   #else
-    #define HEATER_1_PIN       9    // EXTRUDER 2 (FAN On Sprinter)
+    //#define HEATER_1_PIN       9    // EXTRUDER 2 (FAN On Sprinter)
   #endif
 
   #define HEATER_2_PIN       -1 
@@ -520,8 +521,8 @@
   #endif
 
   #define TEMP_0_PIN         13   // ANALOG NUMBERING
-  #define TEMP_1_PIN         15   // ANALOG NUMBERING
-  #define TEMP_2_PIN         -1   // ANALOG NUMBERING
+  #define TEMP_1_PIN         14   // ANALOG NUMBERING
+  #define TEMP_2_PIN         15   // ANALOG NUMBERING
 
   #if MOTHERBOARD == 35
     #define HEATER_BED_PIN     -1    // NO BED

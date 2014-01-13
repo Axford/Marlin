@@ -33,14 +33,16 @@ void manage_heater(); //it is critical that this is called periodically.
 
 #ifdef WATERCOOLING
 void watercooling_init();
+int watercooling_getFlowRate();
+void watercooling_update();
 #endif
 
 // low level conversion routines
 // do not use these routines and variables outside of temperature.cpp
-extern int target_temperature[EXTRUDERS];  
-extern float current_temperature[EXTRUDERS];
+extern int target_temperature[EXTRUDER_TEMP_SENSORS];  
+extern float current_temperature[EXTRUDER_TEMP_SENSORS];
 #ifdef SHOW_TEMP_ADC_VALUES
-  extern int current_temperature_raw[EXTRUDERS];
+  extern int current_temperature_raw[EXTRUDER_TEMP_SENSORS];
   extern int current_temperature_bed_raw;
 #endif
 extern int target_temperature_bed;
@@ -129,7 +131,7 @@ FORCE_INLINE bool isCoolingBed() {
 #define setTargetHotend0(_celsius) setTargetHotend((_celsius), 0)
 #define isHeatingHotend0() isHeatingHotend(0)
 #define isCoolingHotend0() isCoolingHotend(0)
-#if EXTRUDERS > 1
+#if EXTRUDER_TEMP_SENSORS > 1
 #define degHotend1() degHotend(1)
 #define degTargetHotend1() degTargetHotend(1)
 #define setTargetHotend1(_celsius) setTargetHotend((_celsius), 1)
@@ -138,7 +140,7 @@ FORCE_INLINE bool isCoolingBed() {
 #else
 #define setTargetHotend1(_celsius) do{}while(0)
 #endif
-#if EXTRUDERS > 2
+#if EXTRUDER_TEMP_SENSORS > 2
 #define degHotend2() degHotend(2)
 #define degTargetHotend2() degTargetHotend(2)
 #define setTargetHotend2(_celsius) setTargetHotend((_celsius), 2)
@@ -147,8 +149,8 @@ FORCE_INLINE bool isCoolingBed() {
 #else
 #define setTargetHotend2(_celsius) do{}while(0)
 #endif
-#if EXTRUDERS > 3
-#error Invalid number of extruders
+#if EXTRUDER_TEMP_SENSORS > 3
+#error Invalid number of EXTRUDER_TEMP_SENSORS
 #endif
 
 
