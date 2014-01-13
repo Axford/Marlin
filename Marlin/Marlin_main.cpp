@@ -364,7 +364,10 @@ void enquecommand_P(const char *cmd)
 #ifdef Y_DUAL_HALL_SENSOR_PIN
 // returns an oversampled reading from the hall sensor
 int readYDualHallSensor() {
-	delay(50);  // let motor noise settle
+	delay(250);  // wait for reading to update
+		
+	/*
+	delay(50);
 	
 	float r = 0;
 	for (int i=0; i<32; i++) {
@@ -373,6 +376,9 @@ int readYDualHallSensor() {
 	}
 	
 	return (int) r/32.0;
+	*/
+	
+	return current_hall_effect_value;
 }
 #endif
 

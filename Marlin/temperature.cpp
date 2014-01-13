@@ -51,6 +51,12 @@ float current_temperature[EXTRUDER_TEMP_SENSORS];
 #endif
 int current_temperature_bed_raw = 0;
 float current_temperature_bed = 0.0;
+
+#ifdef Y_DUAL_HALL_SENSOR_PINA
+int current_hall_effect_value_raw = 0;
+int current_hall_effect_value = 0;
+#endif
+
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
   int redundant_temperature_raw = 0;
   float redundant_temperature = 0.0;
@@ -703,6 +709,10 @@ static void updateTemperaturesFromRawValues()
     #ifdef TEMP_SENSOR_1_AS_REDUNDANT
       redundant_temperature = analog2temp(redundant_temperature_raw, 1);
     #endif
+	#ifdef Y_DUAL_HALL_SENSOR_PINA
+		current_hall_effect_value = current_hall_effect_value_raw / OVERSAMPLENR;
+	#endif
+	
     //Reset the watchdog after we know we have a temperature measurement.
     watchdog_reset();
 
@@ -1154,6 +1164,7 @@ ISR(TIMER0_COMPB_vect)
   static unsigned long raw_temp_1_value = 0;
   static unsigned long raw_temp_2_value = 0;
   static unsigned long raw_temp_bed_value = 0;
+  static unsigned long raw_hall_effect_value = 0;
   static unsigned char temp_state = 0;
   static unsigned char pwm_count = (1 << SOFT_PWM_SCALE);
   static unsigned char soft_pwm_0;
@@ -1297,9 +1308,32 @@ ISR(TIMER0_COMPB_vect)
       #if defined(TEMP_2_PIN) && (TEMP_2_PIN > -1)
         raw_temp_2_value += ADC;
       #endif
+	  #ifdef Y_DUAL_HALL_SENSOR_PINA
+	  temp_state = 8;
+	  #else
       temp_state = 0;
       temp_count++;
-      break;
+	  #endif
+	  break;
+	#ifdef Y_DUAL_HALL_SENSOR_PINA
+	case 8: // Prepare Y_DUAL_STEPPERS_HALL_SENSOR
+	  #if Y_DUAL_HALL_SENSOR_PINA > 7
+          ADCSRB = 1<<MUX5;
+      #else
+          ADCSRB = 0;
+      #endif
+      ADMUX = ((1 << REFS0) | (Y_DUAL_HALL_SENSOR_PINA & 0x07));
+      ADCSRA |= 1<<ADSC; // Start conversion
+	  temp_state = 9;
+	  break;
+	case 9: // Measure Y_DUAL_STEPPERS_HALL_SENSOR
+	  #if defined(Y_DUAL_HALL_SENSOR_PINA) && (Y_DUAL_HALL_SENSOR_PINA > -1)
+        raw_hall_effect_value += ADC;
+      #endif
+	  temp_state = 0;
+      temp_count++;
+	  break;
+	#endif
 //    default:
 //      SERIAL_ERROR_START;
 //      SERIAL_ERRORLNPGM("Temp measurement error!");
@@ -1321,6 +1355,9 @@ ISR(TIMER0_COMPB_vect)
       current_temperature_raw[2] = raw_temp_2_value;
 #endif
       current_temperature_bed_raw = raw_temp_bed_value;
+#ifdef Y_DUAL_HALL_SENSOR_PINA
+	  current_hall_effect_value_raw = raw_hall_effect_value;
+#endif
     }
     
     temp_meas_ready = true;
@@ -1329,6 +1366,7 @@ ISR(TIMER0_COMPB_vect)
     raw_temp_1_value = 0;
     raw_temp_2_value = 0;
     raw_temp_bed_value = 0;
+	raw_hall_effect_value = 0;
 
 #if HEATER_0_RAW_LO_TEMP > HEATER_0_RAW_HI_TEMP
     if(current_temperature_raw[0] <= maxttemp_raw[0]) {

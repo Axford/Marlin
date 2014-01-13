@@ -47,6 +47,10 @@ extern float current_temperature[EXTRUDER_TEMP_SENSORS];
 #endif
 extern int target_temperature_bed;
 extern float current_temperature_bed;
+#ifdef Y_DUAL_HALL_SENSOR_PINA
+extern int current_hall_effect_value_raw;
+extern int current_hall_effect_value;
+#endif
 #ifdef TEMP_SENSOR_1_AS_REDUNDANT
   extern float redundant_temperature;
 #endif
