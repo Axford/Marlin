@@ -29,7 +29,7 @@
 // This determines the communication speed of the printer
 // This determines the communication speed of the printer
 //define BAUDRATE 250000
-#define BAUDRATE 57600
+#define BAUDRATE 115200
 
 // This enables the serial port associated to the Bluetooth interface
 //#define BTENABLED              // Enable BT interface on AT90USB devices
@@ -404,12 +404,12 @@ const bool Z_MAX_ENDSTOP_INVERTING = true; // set to true to invert the logic of
   // with accurate bed leveling, the bed is sampled in a ACCURATE_BED_LEVELING_POINTSxACCURATE_BED_LEVELING_POINTS grid and least squares solution is calculated
   // Note: this feature occupies 10'206 byte
   #define ACCURATE_BED_LEVELING
-  
+
   #ifdef ACCURATE_BED_LEVELING
      // I wouldn't see a reason to go above 3 (=9 probing points on the bed)
     #define ACCURATE_BED_LEVELING_POINTS 2
   #endif
-  
+
 #endif
 
 

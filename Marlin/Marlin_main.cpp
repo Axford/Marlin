@@ -47,6 +47,7 @@
 #include "language.h"
 #include "pins_arduino.h"
 #include "math.h"
+#include "CRC16.h"
 
 #ifdef BLINKM
 #include "BlinkM.h"
@@ -199,7 +200,7 @@ float add_homeing[3]={0,0,0};
 float endstop_adj[3]={0,0,0};
 #endif
 #ifdef Y_DUAL_HALL_SENSOR_PIN
-float endstop_adj[3]={0,512,0}; 
+float endstop_adj[3]={0,512,0};
 bool y2_axis_enabled = true;
 #endif
 float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
@@ -365,19 +366,19 @@ void enquecommand_P(const char *cmd)
 // returns an oversampled reading from the hall sensor
 int readYDualHallSensor() {
 	delay(250);  // wait for reading to update
-		
+
 	/*
 	delay(50);
-	
+
 	float r = 0;
 	for (int i=0; i<32; i++) {
 		r += analogRead(Y_DUAL_HALL_SENSOR_PINA);
 		delay(10);
 	}
-	
+
 	return (int) r/32.0;
 	*/
-	
+
 	return current_hall_effect_value;
 }
 #endif
@@ -512,11 +513,11 @@ void setup()
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     SET_OUTPUT(CONTROLLERFAN_PIN); //Set pin used for driver cooling fan
   #endif
-  
+
   #ifdef WATERCOOLING
 	watercooling_init();
   #endif
-  
+
   #ifdef LASER
     laser_init();
   #endif
@@ -570,6 +571,24 @@ void loop()
   lcd_update();
 }
 
+//CRC-8 - based on the CRC8 formulas by Dallas/Maxim
+//code released under the therms of the GNU GPL 3.0 license
+byte CRC8(const byte *data, byte len) {
+  byte crc = 0x00;
+  while (len--) {
+    byte extract = *data++;
+    for (byte tempI = 8; tempI; tempI--) {
+      byte sum = (crc ^ extract) & 0x01;
+      crc >>= 1;
+      if (sum) {
+        crc ^= 0x8C;
+      }
+      extract >>= 1;
+    }
+  }
+  return crc;
+}
+
 void get_command()
 {
   while( MYSERIAL.available() > 0  && buflen < BUFSIZE) {
@@ -603,15 +622,20 @@ void get_command()
 
           if(strchr(cmdbuffer[bufindw], '*') != NULL)
           {
-            byte checksum = 0;
+            unsigned short checksum = 0;
             byte count = 0;
-            while(cmdbuffer[bufindw][count] != '*') checksum = checksum^cmdbuffer[bufindw][count++];
+            // replace old XOR-based checksum with CRC8
+            //while(cmdbuffer[bufindw][count] != '*') checksum = checksum^cmdbuffer[bufindw][count++];
+            while(cmdbuffer[bufindw][count] != '*') count++;
+            checksum = CRC16((unsigned char*)&cmdbuffer[bufindw], count);
             strchr_pointer = strchr(cmdbuffer[bufindw], '*');
 
             if( (int)(strtod(&cmdbuffer[bufindw][strchr_pointer - cmdbuffer[bufindw] + 1], NULL)) != checksum) {
               SERIAL_ERROR_START;
               SERIAL_ERRORPGM(MSG_ERR_CHECKSUM_MISMATCH);
               SERIAL_ERRORLN(gcode_LastN);
+              SERIAL_PROTOCOL_F(checksum, 10);
+              SERIAL_ECHOLN("");
               FlushSerialRequestResend();
               serial_count = 0;
               return;
@@ -1070,27 +1094,27 @@ static void homeaxis(int axis) {
 		y2_axis_enabled = false;
 		// also disable endstops, otherwise corrective movements will be blocked
 		enable_endstops(false);
-		
+
 		// read hall sensor
 		int y2Pos = readYDualHallSensor();
 		int error = endstop_adj[Y_AXIS] - y2Pos;
 		int iterations = 100;
 		int errorDir = error>0?1:-1;
-		
+
 		destination[Y_AXIS] = 0;
-		
+
 		while(abs(error) > 2 && iterations > 0) {
 			// if error is positive, move Y axis towards endstop  5(?) steps
 			//axis_steps_per_unit[Y_AXIS]
-			
+
 			SERIAL_PROTOCOL("Y2 endstop error:");
 			SERIAL_PROTOCOL(error);
 			SERIAL_PROTOCOLLN("");
-		
+
 			plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-			
+
 			destination[axis] = 8.0/axis_steps_per_unit[Y_AXIS] * axis_home_dir * errorDir;
-			
+
 			plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
 			st_synchronize();
 
@@ -1099,7 +1123,7 @@ static void homeaxis(int axis) {
 			errorDir = error>0?1:-1;
 			iterations -= 1;
 		}
-		
+
 		SERIAL_PROTOCOL("Y2 aligned, error:");
 		SERIAL_PROTOCOL(error);
 		SERIAL_PROTOCOLLN("");
@@ -1444,26 +1468,26 @@ void process_commands()
 
             feedrate = homing_feedrate[Z_AXIS];
 #ifdef ACCURATE_BED_LEVELING
-            
+
             int xGridSpacing = (RIGHT_PROBE_BED_POSITION - LEFT_PROBE_BED_POSITION) / (ACCURATE_BED_LEVELING_POINTS-1);
             int yGridSpacing = (BACK_PROBE_BED_POSITION - FRONT_PROBE_BED_POSITION) / (ACCURATE_BED_LEVELING_POINTS-1);
-            
-            
+
+
             // solve the plane equation ax + by + d = z
             // A is the matrix with rows [x y 1] for all the probed points
             // B is the vector of the Z positions
             // the normal vector to the plane is formed by the coefficients of the plane equation in the standard form, which is Vx*x+Vy*y+Vz*z+d = 0
             // so Vx = -a Vy = -b Vz = 1 (we want the vector facing towards positive Z
-            
+
             // "A" matrix of the linear system of equations
             double eqnAMatrix[ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS*3];
             // "B" vector of Z points
             double eqnBVector[ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS];
-            
-            
+
+
             int probePointCounter = 0;
             bool zig = true;
-            
+
             for (int yProbe=FRONT_PROBE_BED_POSITION; yProbe <= BACK_PROBE_BED_POSITION; yProbe += yGridSpacing)
             {
               int xProbe, xInc;
@@ -1480,7 +1504,7 @@ void process_commands()
                 xInc = -xGridSpacing;
                 zig = true;
               }
-              
+
               for (int xCount=0; xCount < ACCURATE_BED_LEVELING_POINTS; xCount++)
               {
                 if (probePointCounter == 0)
@@ -1488,19 +1512,19 @@ void process_commands()
                   // raise before probing
                   do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_RAISE_BEFORE_PROBING);
                 } else
-                {               
+                {
                   // raise extruder
                   do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS] + Z_RAISE_BETWEEN_PROBINGS);
                 }
-                
-                
+
+
                 do_blocking_move_to(xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER, current_position[Z_AXIS]);
-    
+
                 engage_z_probe();   // Engage Z Servo endstop if available
                 run_z_probe();
                 eqnBVector[probePointCounter] = current_position[Z_AXIS];
                 retract_z_probe();
-    
+
                 SERIAL_PROTOCOLPGM("Bed x: ");
                 SERIAL_PROTOCOL(xProbe);
                 SERIAL_PROTOCOLPGM(" y: ");
@@ -1508,7 +1532,7 @@ void process_commands()
                 SERIAL_PROTOCOLPGM(" z: ");
                 SERIAL_PROTOCOL(current_position[Z_AXIS]);
                 SERIAL_PROTOCOLPGM("\n");
-                
+
                 eqnAMatrix[probePointCounter + 0*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = xProbe;
                 eqnAMatrix[probePointCounter + 1*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = yProbe;
                 eqnAMatrix[probePointCounter + 2*ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS] = 1;
@@ -1517,25 +1541,25 @@ void process_commands()
               }
             }
             clean_up_after_endstop_move();
-            
+
             // solve lsq problem
             double *plane_equation_coefficients = qr_solve(ACCURATE_BED_LEVELING_POINTS*ACCURATE_BED_LEVELING_POINTS, 3, eqnAMatrix, eqnBVector);
-            
+
             SERIAL_PROTOCOLPGM("Eqn coefficients: a: ");
             SERIAL_PROTOCOL(plane_equation_coefficients[0]);
             SERIAL_PROTOCOLPGM(" b: ");
             SERIAL_PROTOCOL(plane_equation_coefficients[1]);
             SERIAL_PROTOCOLPGM(" d: ");
             SERIAL_PROTOCOLLN(plane_equation_coefficients[2]);
-            
-            
+
+
             set_bed_level_equation_lsq(plane_equation_coefficients);
-            
+
             free(plane_equation_coefficients);
-            
+
 #else // ACCURATE_BED_LEVELING not defined
-            
-            
+
+
             // prob 1
             do_blocking_move_to(current_position[X_AXIS], current_position[Y_AXIS], Z_RAISE_BEFORE_PROBING);
             do_blocking_move_to(LEFT_PROBE_BED_POSITION - X_PROBE_OFFSET_FROM_EXTRUDER, BACK_PROBE_BED_POSITION - Y_PROBE_OFFSET_FROM_EXTRUDER, current_position[Z_AXIS]);
@@ -1591,8 +1615,8 @@ void process_commands()
             clean_up_after_endstop_move();
 
             set_bed_level_equation(z_at_xLeft_yFront, z_at_xRight_yFront, z_at_xLeft_yBack);
-         
-            
+
+
 #endif // ACCURATE_BED_LEVELING
             st_synchronize();
 
@@ -1695,7 +1719,7 @@ void process_commands()
 #endif
 #ifdef LASER
 	case 3:    // M3, same as M4
-    case 4:    // M4 - turn laser on, power level as percentage as S parameter (range 0-100)	
+    case 4:    // M4 - turn laser on, power level as percentage as S parameter (range 0-100)
 	  if (isLaserArmed()) {
 		if(code_seen('S')) setLaserPower(code_value());
 		st_synchronize();
@@ -2392,14 +2416,14 @@ void process_commands()
 		  codenum = 0;
 		  if(code_seen('P')) codenum = code_value(); // milliseconds to wait
 		  if(code_seen('S')) setLaserPower(code_value());
-		
+
 		  SERIAL_ECHO_START;
 		  SERIAL_ECHO("Test Firing Laser at ");
 		  SERIAL_ECHO(getLaserPower());
 		  SERIAL_ECHO("% for ");
 		  SERIAL_ECHO(codenum);
 		  SERIAL_ECHOLN("ms");
-		
+
 		  if (codenum > 0) {
 			  st_synchronize();
 			  codenum += millis();  // keep track of when we started waiting
@@ -3342,7 +3366,7 @@ void get_bezier_coordinates(float p[4][2])
 		p[i][0] = current_position[0];
 		p[i][1] = current_position[1];
    }
-   
+
     get_coordinates();
 
     // start point
@@ -3450,16 +3474,16 @@ unsigned long watercooling_lastCheck=0;
 
 void watercooling() {
 	unsigned long curTime = millis();
-	
+
 	// check every 200ms (approx)
 	if (curTime > watercooling_lastCheck + 200) {
 		watercooling_update();
-	
-		
-		
-		
+
+
+
+
 		//SERIAL_PROTOCOLLN(watercooling_getFlowRate());
-	
+
 		watercooling_lastCheck = curTime;
 	}
 }
@@ -3695,4 +3719,3 @@ bool setTargetedHotend(int code){
   }
   return false;
 }
-
