@@ -143,8 +143,8 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
 void mc_bezier(float p[4][2], float feed_rate, uint8_t extruder) {
 
   int steps = 10;
-  float stepsPerUnit = 0.7;  // approx segments per mm
-  float stepsPerUnitSqr = stepsPerUnit * stepsPerUnit;
+  float stepsPerUnit = 1;  // approx segments per mm
+  float stepsPerUnitSqr = 0.5 * 0.5;
 
   float f[2]={0,0};  // next position
   float lf[2] = {0,0};  // last position
